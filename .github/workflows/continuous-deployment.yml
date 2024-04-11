@@ -1,5 +1,9 @@
 on: [push]
 
+permissions:
+  id-token: write
+  contents: read 
+
 env:
   BACKEND_REPOSITORY: devops-na-nuvem-week/production/backend
   IMAGE_TAG: ${{ github.sha }}
