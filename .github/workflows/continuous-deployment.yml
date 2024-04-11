@@ -26,12 +26,11 @@ jobs:
         name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
   
-      - name: Package and push helm chart to Amazon ECR
+      - name: Package and push to Amazon ECR
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          docker build -f backend/YoutubeLiveApp \
-            -t $REGISTRY/$BACKEND_REPOSITORY:$IMAGE_TAG backend/YoutubeLiveApp \
+          docker build -f backend/YoutubeLiveApp/Dockerfile -t $REGISTRY/$BACKEND_REPOSITORY:$IMAGE_TAG backend/YoutubeLiveApp
           docker push $REGISTRY/$BACKEND_REPOSITORY:$IMAGE_TAG
 
       - name: Checkout GitOps Repository
