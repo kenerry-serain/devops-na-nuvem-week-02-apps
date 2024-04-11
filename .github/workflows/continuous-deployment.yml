@@ -6,6 +6,7 @@ permissions:
 
 env:
   BACKEND_REPOSITORY: devops-na-nuvem-week/production/backend
+  FRONTEND_REPOSITORY: devops-na-nuvem-week/production/frontend
   IMAGE_TAG: ${{ github.sha }}
 
 jobs:
@@ -48,5 +49,46 @@ jobs:
           kustomize edit set image $REGISTRY/$BACKEND_REPOSITORY=$REGISTRY/$BACKEND_REPOSITORY:$IMAGE_TAG
           git add kustomization.yml
           git commit -m "[Kustomize] Updating backend image to $REGISTRY/$BACKEND_REPOSITORY:$IMAGE_TAG"
+          git push
+  
+  frontend_job:
+    runs-on: ubuntu-latest
+    name: Frontend Continuous Deployment
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - id: login-ecr
+        name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+  
+      - name: Package and push to Amazon ECR
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker build -f frontend/youtube-live-app/Dockerfile -t $REGISTRY/$FRONTEND_REPOSITORY:$IMAGE_TAG frontend/youtube-live-app
+          docker push $REGISTRY/$FRONTEND_REPOSITORY:$IMAGE_TAG
+
+      - name: Checkout GitOps Repository
+        uses: actions/checkout@v4
+        with:
+          repository: kenerry-serain/devops-na-nuvem-week-02-gitops
+          token: ${{ secrets.PAT }}
+
+      - name: Updating GitOps Manifests
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          kustomize edit set image $REGISTRY/$FRONTEND_REPOSITORY=$REGISTRY/$FRONTEND_REPOSITORY:$IMAGE_TAG
+          git add kustomization.yml
+          git commit -m "[Kustomize] Updating backend image to $REGISTRY/$FRONTEND_REPOSITORY:$IMAGE_TAG"
           git push
   
